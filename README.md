@@ -14,3 +14,6 @@ example
 =======
 advection_1d:
     advection equation which outputs ascii files (can be ploted with ygraph)
+
+lorenz
+    simple lorenz model
