@@ -55,11 +55,14 @@ func main() {
 		panic(err)
 	}
 	defer fo.Close()
+	grid.SetOutVars([]string{"f"})
+
 
 	/* time step */
 	dt := 0.01
 	ot := 10
-	for t := 0; t < 10000; t++ {
+	grid.Output_netcdf_init(1000/ot)
+	for t := 0; t < 1000; t++ {
 		// output timestep
 		if t%ot == 0 {
 			fmt.Println("step", t, grid.GetTime())
@@ -71,6 +74,7 @@ func main() {
 				fo.Write([]byte(line))
 			}
 			fo.Write([]byte("\n"))
+			grid.Output_netcdf(t/ot)
 		}
 		// integrade one timestep
 		grid.TimeInt(vl, &dt)

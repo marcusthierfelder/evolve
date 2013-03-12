@@ -1,12 +1,9 @@
 package evolve
 
 import (
-	_ "flag"
 	"fmt"
-	"io"
 	"log"
 	"math"
-	"os"
 	"reflect"
 	"strconv"
 )
@@ -19,14 +16,14 @@ var (
 	rk_eps_max = 1e-3
 	rk_it_max  = 20
 
-	rhs_ptr interface{}	
+	rhs_ptr interface{}
 )
 
 type Grid struct {
-	dim 			 int // dimensions used
-	nx, ny, nz       int // ... as in 
-	ntot, di, dj, dk int // number of points
-	gh               int // number of ghosts
+	dim              int     // dimensions used
+	nx, ny, nz       int     // ... as in 
+	ntot, di, dj, dk int     // number of points
+	gh               int     // number of ghosts
 	time             float64 // time ...
 	dx, dy, dz       float64
 	x0, y0, z0       float64
@@ -34,7 +31,7 @@ type Grid struct {
 
 	/* fields not yet used */
 	boundary, boundaryA, boundaryB []int
-	outvars []string
+	outvars                        []string
 }
 type Field struct {
 	name  string
@@ -52,47 +49,49 @@ func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 	var grid Grid
 
 	grid.dim = len(Nx)
-	if grid.dim<0 || grid.dim>3 {
+	if grid.dim < 0 || grid.dim > 3 {
 		log.Fatal("use only 0D 1D 2D 3D as grid size")
 	}
-	if len(Nx)!=len(x0) || len(Nx)!=len(dx) {
+	if len(Nx) != len(x0) || len(Nx) != len(dx) {
 		log.Fatal("wrong dimensions used")
 	}
 
-	tNx := []int{1,1,1}
-	tdx := []float64{1.,1.,1.}
-	tx0 := []float64{0.,0.,0.}
+	tNx := []int{1, 1, 1}
+	tdx := []float64{1., 1., 1.}
+	tx0 := []float64{0., 0., 0.}
 
-	copy(tNx,Nx)
-	copy(tdx,dx)
-	copy(tx0,x0)
+	copy(tNx, Nx)
+	copy(tdx, dx)
+	copy(tx0, x0)
 
-	grid.nx,grid.ny,grid.nz = tNx[0],tNx[1],tNx[2]
-	grid.dx,grid.dy,grid.dz = tdx[0],tdx[1],tdx[2]
-	grid.x0,grid.y0,grid.z0 = tx0[0],tx0[1],tx0[2]
+	grid.nx, grid.ny, grid.nz = tNx[0], tNx[1], tNx[2]
+	grid.dx, grid.dy, grid.dz = tdx[0], tdx[1], tdx[2]
+	grid.x0, grid.y0, grid.z0 = tx0[0], tx0[1], tx0[2]
 
-	grid.ntot = tNx[0]*tNx[1]*tNx[2]
+	grid.ntot = tNx[0] * tNx[1] * tNx[2]
 	grid.di = 1
 	grid.dj = tNx[0]
-	grid.dk = tNx[0]*tNx[1]
+	grid.dk = tNx[0] * tNx[1]
 	grid.time = 0.
 
-	grid.AddVars([]string{"x","y","z"})
+	grid.AddVars([]string{"x", "y", "z"})
 	x := grid.GetVar("x")
 	y := grid.GetVar("y")
 	z := grid.GetVar("z")
 	ijk := 0
-	for k:=0; k<tNx[2]; k++ {
-	for j:=0; j<tNx[1]; j++ {
-	for i:=0; i<tNx[0]; i++ {
-		x[ijk] = tx0[0] + tdx[0]*float64(i)
-		y[ijk] = tx0[1] + tdx[1]*float64(j)
-		z[ijk] = tx0[2] + tdx[2]*float64(k)
-		
-		ijk++
+	for k := 0; k < tNx[2]; k++ {
+		for j := 0; j < tNx[1]; j++ {
+			for i := 0; i < tNx[0]; i++ {
+				x[ijk] = tx0[0] + tdx[0]*float64(i)
+				y[ijk] = tx0[1] + tdx[1]*float64(j)
+				z[ijk] = tx0[2] + tdx[2]*float64(k)
+
+				ijk++
+			}
+		}
 	}
-}
-}
+
+	grid.boundary = make([]int, grid.ntot)
 
 	return &grid
 }
@@ -100,13 +99,13 @@ func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 /* get back the size of the grid */
 func (grid *Grid) GetSize() ([]int, []float64) {
 
-	Nx := []int{grid.nx,grid.ny,grid.nz}
-	dx := []float64{grid.dx,grid.dy,grid.dz}
+	Nx := []int{grid.nx, grid.ny, grid.nz}
+	dx := []float64{grid.dx, grid.dy, grid.dz}
 
-	return Nx[0:grid.dim],dx[0:grid.dim]
+	return Nx[0:grid.dim], dx[0:grid.dim]
 }
 
-func (grid *Grid) GetTime() (float64) {
+func (grid *Grid) GetTime() float64 {
 	return grid.time
 }
 
@@ -155,10 +154,10 @@ func (grid *Grid) TimeInt_init(uc VarList, integrator string, rhs_func interface
 }
 
 /* set the rk4 accuracy options */
-func SetRK45Accuracy(min,max float64, it int) {
+func SetRK45Accuracy(min, max float64, it int) {
 	rk_eps_min = min
 	rk_eps_max = max
-	rk_it_max  = it
+	rk_it_max = it
 }
 
 /* actual timeintegrator, which does (hopefully) everything 
@@ -253,7 +252,6 @@ func (grid *Grid) rhs(r, evl VarList) {
 	in[2] = reflect.ValueOf(evl)
 	f.Call(in)
 }
-
 
 /* time integratos */
 func (grid *Grid) rk4(uc VarList, dt float64) {
@@ -462,50 +460,4 @@ func (vl *VarList) GetVar(i int) []float64 {
 		log.Fatal("GetVar, number out of list")
 	}
 	return vl.field[i].data
-}
-
-/* output */
-func (grid *Grid) Output_vtk(data string, file string, it int) {
-
-	/* init buffer */
-	//x := grid.GetVar("x")
-	//y := grid.GetVar("y")
-	d := grid.GetVar(data)
-
-	flag := os.O_CREATE | os.O_TRUNC | os.O_RDWR
-
-	file = fmt.Sprintf("%s_%04d.vtk", file, it)
-
-	f, err := os.OpenFile(file, flag, 0666)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	fmt.Println("write ", file, grid.time)
-	//io.WriteString(f, fmt.Sprintf("#Time = %e\n", grid.time))
-	io.WriteString(f, fmt.Sprintf("# vtk DataFile Version 2.0\n"))
-	io.WriteString(f, fmt.Sprintf("variable f, level 0, time %16.9e\n", grid.time))
-	io.WriteString(f, fmt.Sprintf("ASCII\n"))
-	io.WriteString(f, fmt.Sprintf("DATASET STRUCTURED_POINTS\n"))
-	io.WriteString(f, fmt.Sprintf("DIMENSIONS %d %d %d\n", grid.nx, grid.ny, grid.nz))
-	io.WriteString(f, fmt.Sprintf("ORIGIN  %16.9e %16.9e %16.9e\n", 0., 0., 0.))
-	io.WriteString(f, fmt.Sprintf("SPACING %16.9e %16.9e %16.9e\n", grid.dx, grid.dy, grid.dz))
-	io.WriteString(f, fmt.Sprintf("\n"))
-	io.WriteString(f, fmt.Sprintf("POINT_DATA %d\n", grid.nx*grid.ny))
-	io.WriteString(f, fmt.Sprintf("SCALARS scalars float\n"))
-	io.WriteString(f, fmt.Sprintf("LOOKUP_TABLE default\n"))
-
-	ij := 0
-	for k := 0; k < grid.nz; k++ {
-		for j := 0; j < grid.ny; j++ {
-			for i := 0; i < grid.nx; i++ {
-				io.WriteString(f, fmt.Sprintf("%16.09e\n", d[ij]))
-				ij++
-			}
-		}
-	}
-	//io.WriteString(f, "\n")
-
-	f.Close()
 }
