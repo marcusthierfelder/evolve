@@ -9,11 +9,13 @@ as you want into a list of variables and provide a function which
 calculates the righthandsides and pass it to the library. Then 
 you can integrate. An simple output routine for vtk is included.
 
+there is also a vtk and a netcdf output routine ... very rudimental
 
 example
 =======
 advection_1d:
-    advection equation which outputs ascii files (can be ploted with ygraph)
+    advection equation which outputs ascii files 
+    (can be ploted with ygraph and ncview)
 
 lorenz
-    simple lorenz model
+    simple lorenz model (0d)

@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	tmp_vl     []VarList
-	INTEGRATOR = "none"
+	tmp_vl   []VarList
+	time_int = "none"
 
 	rk_eps_min = 1e-4
 	rk_eps_max = 1e-3
@@ -27,24 +27,24 @@ type Grid struct {
 	time             float64 // time ...
 	dx, dy, dz       float64
 	x0, y0, z0       float64
-	field            []Field // data storage
+	field            []field // data storage
 
 	/* fields not yet used */
 	boundary, boundaryA, boundaryB []int
 	outvars                        []string
 }
-type Field struct {
+type field struct {
 	name  string
 	sync  bool
 	data  []float64
 	gtype byte
 }
 type VarList struct {
-	field []*Field
+	field []*field
 	grid  *Grid
 }
 
-/* set Gridvalue */
+// create a grid
 func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 	var grid Grid
 
@@ -96,7 +96,7 @@ func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 	return &grid
 }
 
-/* get back the size of the grid */
+// get back the size of the grid 
 func (grid *Grid) GetSize() ([]int, []float64) {
 
 	Nx := []int{grid.nx, grid.ny, grid.nz}
@@ -105,13 +105,14 @@ func (grid *Grid) GetSize() ([]int, []float64) {
 	return Nx[0:grid.dim], dx[0:grid.dim]
 }
 
+// get back the current time
 func (grid *Grid) GetTime() float64 {
 	return grid.time
 }
 
-/* time integrator initialization which have to be called before
-the actual integration in order to set integrator and pass rhs
-computation function */
+// time integrator initialization which have to be called before
+// the actual integration in order to set integrator and pass rhs
+// computation function 
 func (grid *Grid) TimeInt_init(uc VarList, integrator string, rhs_func interface{}) {
 	// better too much ... its the simplest way 
 	tmp_vl = []VarList{
@@ -149,22 +150,21 @@ func (grid *Grid) TimeInt_init(uc VarList, integrator string, rhs_func interface
 	}
 
 	// set integrator
-	INTEGRATOR = integrator
+	time_int = integrator
 	rhs_ptr = rhs_func
 }
 
-/* set the rk4 accuracy options */
-func SetRK45Accuracy(min, max float64, it int) {
+// set the rk4 accuracy options 
+func (grid *Grid) SetRK45Accuracy(min, max float64, it int) {
 	rk_eps_min = min
 	rk_eps_max = max
 	rk_it_max = it
 }
 
-/* actual timeintegrator, which does (hopefully) everything 
-by itself */
+// actual timeintegrator, which does (hopefully) everything by itself
 func (grid *Grid) TimeInt(uc VarList, dt *float64) {
 
-	switch INTEGRATOR {
+	switch time_int {
 	case "euler":
 		grid.euler(uc, *dt)
 	case "icn":
@@ -381,7 +381,7 @@ func (grid *Grid) euler(uc VarList, dt float64) {
 	grid.addto(uc, dt, r)
 }
 
-/* global variable storage stuff */
+// add a variable to global stuck
 func (grid *Grid) AddVar(name string) {
 	fmt.Println("AddVar: ", name)
 
@@ -390,30 +390,32 @@ func (grid *Grid) AddVar(name string) {
 	}
 
 	l := len(grid.field)
-	tmp := make([]Field, l+1)
+	tmp := make([]field, l+1)
 	copy(tmp, grid.field)
 	grid.field = tmp
 
-	f := Field{
+	f := field{
 		name: name,
 		data: make([]float64, grid.nx*grid.ny)}
 
 	grid.field[l] = f
 }
 
+// add a variables to global stuck
 func (grid *Grid) AddVars(names []string) {
 	for _, name := range names {
 		grid.AddVar(name)
 	}
 }
 
+// get the data of this field
 func (grid *Grid) GetVar(name string) []float64 {
-	ptr := grid.GetField(name)
+	ptr := grid.getfield(name)
 	return ptr.data
 }
 
-func (grid *Grid) GetField(name string) *Field {
-	var ptr *Field
+func (grid *Grid) getfield(name string) *field {
+	var ptr *field
 
 	ptr = nil
 	for i, f := range grid.field {
@@ -430,9 +432,7 @@ func (grid *Grid) GetField(name string) *Field {
 	return ptr
 }
 
-/* varlist stuff  to manage variables which have to be passed
-to the timeintegrators
-*/
+//manage variables which have to be passed to the timeintegrators 
 func (grid *Grid) CreateVarlist() VarList {
 	var vl VarList
 	vl.grid = grid
@@ -440,21 +440,24 @@ func (grid *Grid) CreateVarlist() VarList {
 	return vl
 }
 
+// add a variable to this varlist
 func (vl *VarList) AddVar(name string) {
 	l := len(vl.field)
-	tmp := make([]*Field, l+1)
+	tmp := make([]*field, l+1)
 	copy(tmp, vl.field)
 	vl.field = tmp
 
-	vl.field[l] = vl.grid.GetField(name)
+	vl.field[l] = vl.grid.getfield(name)
 }
 
+// add a variables to this varlist
 func (vl *VarList) AddVars(names []string) {
 	for _, name := range names {
 		vl.AddVar(name)
 	}
 }
 
+// get the data of the i-th stored variable in this list
 func (vl *VarList) GetVar(i int) []float64 {
 	if i >= len(vl.field) {
 		log.Fatal("GetVar, number out of list")
