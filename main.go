@@ -30,7 +30,7 @@ type Grid struct {
 	field            []field // data storage
 
 	/* fields not yet used */
-	boundary, boundaryA, boundaryB []int
+	boundary, boundaryA, boundaryB, boundaryC []int
 	outvars                        []string
 }
 type field struct {
@@ -92,17 +92,24 @@ func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 	}
 
 	grid.boundary = make([]int, grid.ntot)
+	grid.boundaryA = make([]int, (grid.nx+1)*grid.ny*grid.nz)
+	grid.boundaryB = make([]int, grid.nx*(grid.ny+1)*grid.nz)
+	grid.boundaryC = make([]int, grid.nx*grid.ny*(grid.nz+1))
 
 	return &grid
 }
 
 // get back the size of the grid 
-func (grid *Grid) GetSize() ([]int, []float64) {
+// Nx number of pts in one direction
+// di offset to get to the next point in one direction within the global stack
+// dx gridspacing in one direction
+func (grid *Grid) GetSize() (Nx,di []int, dx []float64) {
 
-	Nx := []int{grid.nx, grid.ny, grid.nz}
-	dx := []float64{grid.dx, grid.dy, grid.dz}
+	Nx = []int{grid.nx, grid.ny, grid.nz}
+	di = []int{grid.di, grid.dj, grid.dj}
+	dx = []float64{grid.dx, grid.dy, grid.dz}
 
-	return Nx[0:grid.dim], dx[0:grid.dim]
+	return Nx[0:grid.dim], di[0:grid.dim], dx[0:grid.dim]
 }
 
 // get back the current time
@@ -412,6 +419,24 @@ func (grid *Grid) AddVars(names []string) {
 func (grid *Grid) GetVar(name string) []float64 {
 	ptr := grid.getfield(name)
 	return ptr.data
+}
+
+// get the boundary data as a screen
+func (grid *Grid) GetBound(name string) []int {
+	switch name {
+	case "":
+		return grid.boundary
+	case "A":
+		return grid.boundaryA
+	case "B":
+		return grid.boundaryB
+	case "C":
+		return grid.boundaryC
+	default:
+			panic("boundary does not exist!")
+	}
+
+	return []int{}
 }
 
 func (grid *Grid) getfield(name string) *field {

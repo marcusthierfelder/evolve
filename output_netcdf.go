@@ -52,7 +52,7 @@ func (grid *Grid) Output_netcdf_init(nout int) {
 		h.AddVariable("z", []string{"z"}, []float32{0.})
 	}
 	h.AddVariable("boundary", c1, []int32{0})
-	for _, vname := range outvars {
+	for _, vname := range grid.outvars {
 		h.AddVariable(vname, c2, []float32{0.})
 	}
 
@@ -113,7 +113,7 @@ func (grid *Grid) Output_netcdf(it int) {
 	ff, _ := os.OpenFile(outfile_netcdf, os.O_RDWR, 660)
 	f, _ := cdf.Open(ff)
 
-	for _, vname := range outvars {
+	for _, vname := range grid.outvars {
 
 		r := f.Writer(vname, []int{it, 0}, []int{it, grid.nx})
 		switch grid.dim {

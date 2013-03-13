@@ -15,7 +15,7 @@ var (
 func rhs(grid *Grid, r, evl VarList) {
 	f := evl.GetVar(0)
 	df := r.GetVar(0)
-	nx, dx := grid.GetSize()
+	nx, _, dx := grid.GetSize()
 
 	// simple symmetric stencil
 	for i := 1; i < nx[0]-1; i++ {

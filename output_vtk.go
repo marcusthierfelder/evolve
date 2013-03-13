@@ -31,7 +31,7 @@ func (grid *Grid) Output_vtk(it int) {
 	io.WriteString(f, fmt.Sprintf("\n"))
 	io.WriteString(f, fmt.Sprintf("POINT_DATA %d\n", grid.nx*grid.ny*grid.nz))
 
-	for _, v := range outvars {
+	for _, v := range grid.outvars {
 		d := grid.GetVar(v)
 
 		io.WriteString(f, fmt.Sprintf("SCALARS %s float\n", v))
