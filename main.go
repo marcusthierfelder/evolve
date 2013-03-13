@@ -21,15 +21,14 @@ var (
 
 type Grid struct {
 	dim              int     // dimensions used
-	nx, ny, nz       int     // ... as in 
+	nx, ny, nz       int     // number of points
 	ntot, di, dj, dk int     // number of points
 	gh               int     // number of ghosts
 	time             float64 // time ...
-	dx, dy, dz       float64
-	x0, y0, z0       float64
+	dx, dy, dz       float64 // grid spacing
+	x0, y0, z0       float64 // coordinate offset
 	field            []field // data storage
 
-	/* fields not yet used */
 	boundary, boundaryA, boundaryB, boundaryC []int
 	outvars                        []string
 }
@@ -251,12 +250,12 @@ func (grid *Grid) vlnorm(vl1 VarList, vl2 VarList) float64 {
 	return m
 }
 
-func (grid *Grid) rhs(r, evl VarList) {
+func (grid *Grid) rhs(r, uc VarList) {
 	f := reflect.ValueOf(rhs_ptr)
 	in := make([]reflect.Value, 3)
 	in[0] = reflect.ValueOf(grid)
 	in[1] = reflect.ValueOf(r)
-	in[2] = reflect.ValueOf(evl)
+	in[2] = reflect.ValueOf(uc)
 	f.Call(in)
 }
 

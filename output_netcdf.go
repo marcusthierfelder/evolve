@@ -4,18 +4,24 @@ import (
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
 	"os"
+	_"reflect"
 )
 
 var (
 	outfile_netcdf string
+	nout_store_netcdf = -1
 )
 
+// init a netcdf file, DONT use two files within one prog, can
+// produce a messed up situation! additionally, do not change
+// outvars after init... not good
 func (grid *Grid) Output_netcdf_init(nout int) {
 
 	if grid.dim < 1 || grid.dim > 3 {
 		panic("this dimension is not supported")
 	}
 
+	nout_store_netcdf = nout
 	outfile_netcdf = outpath + "/" + outfile + ".ncf"
 	fmt.Println("Init netcdf file:", outfile_netcdf)
 
@@ -81,10 +87,10 @@ func (grid *Grid) Output_netcdf_init(nout int) {
 
 	// fill buffer for boundary points
 	ijk := 0
-	for k := 0; k < grid.ny; k++ {
+	for k := 0; k < grid.nz; k++ {
 		for j := 0; j < grid.ny; j++ {
 			for i := 0; i < grid.nx; i++ {
-				fmt.Println(ijk, i*grid.di+j*grid.dj+k*grid.dk)
+				//fmt.Println(i,j,k,ijk, i*grid.di+j*grid.dj+k*grid.dk)
 				buf[ijk] = int32(grid.boundary[i*grid.di+j*grid.dj+k*grid.dk])
 				ijk++
 			}
@@ -103,10 +109,16 @@ func (grid *Grid) Output_netcdf_init(nout int) {
 		r = f.Writer("z", []int{0}, []int{grid.nz})
 		r.Write(bufy)
 	}
-
 }
 
+// write a time slice of data to file
 func (grid *Grid) Output_netcdf(it int) {
+
+	if nout_store_netcdf == -1 {
+		panic("first init netcdf file, then write data")
+	} else if nout_store_netcdf <it {
+		panic("here should be an append function... please implement!")
+	}
 
 	fmt.Println("Write netcdf file:", outfile_netcdf, it)
 
@@ -115,13 +127,19 @@ func (grid *Grid) Output_netcdf(it int) {
 
 	for _, vname := range grid.outvars {
 
-		r := f.Writer(vname, []int{it, 0}, []int{it, grid.nx})
+		var d1, d2 []int
 		switch grid.dim {
+		case 1:
+			d1 = []int{it, 0}
+			d2 = []int{it, grid.nx}
 		case 2:
-			r = f.Writer(vname, []int{it, 0, 0}, []int{it, grid.ny, grid.nx})
+			d1 = []int{it, 0, 0}
+			d2 = []int{it, grid.ny, grid.nx}
 		case 3:
-			r = f.Writer(vname, []int{it, 0, 0, 0}, []int{it, grid.nz, grid.ny, grid.nx})
+			d1 = []int{it, 0, 0, 0}
+			d2 = []int{it, grid.nz, grid.ny, grid.nx}
 		}
+		r := f.Writer(vname, d1, d2)
 
 		buf := make([]float32, grid.nx*grid.ny*grid.nz) // a []T of the right T for the variable.
 
@@ -136,9 +154,6 @@ func (grid *Grid) Output_netcdf(it int) {
 			}
 		}
 
-		fmt.Println(buf)
-
 		r.Write(buf)
 	}
-	//os.Exit(0)
 }
