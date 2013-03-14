@@ -9,12 +9,14 @@ import (
 )
 
 var (
-	tmp_vl   []VarList
-	time_int = "none"
+	tmp_vl, tmp_tf []VarList
+	time_int       = "none"
 
 	rk_eps_min = 1e-4
 	rk_eps_max = 1e-3
 	rk_it_max  = 20
+	timefilter = false
+	damping    = false
 
 	rhs_ptr interface{}
 )
@@ -30,7 +32,7 @@ type Grid struct {
 	field            []field // data storage
 
 	boundary, boundaryA, boundaryB, boundaryC []int
-	outvars                        []string
+	outvars                                   []string
 }
 type field struct {
 	name  string
@@ -102,7 +104,7 @@ func CreateGrid(Nx []int, x0, dx []float64) *Grid {
 // Nx number of pts in one direction
 // di offset to get to the next point in one direction within the global stack
 // dx gridspacing in one direction
-func (grid *Grid) GetSize() (Nx,di []int, dx []float64) {
+func (grid *Grid) GetSize() (Nx, di []int, dx []float64) {
 
 	Nx = []int{grid.nx, grid.ny, grid.nz}
 	di = []int{grid.di, grid.dj, grid.dj}
@@ -124,6 +126,8 @@ func (grid *Grid) TimeInt_init(uc VarList, integrator string, rhs_func interface
 	tmp_vl = []VarList{
 		grid.CreateVarlist(), grid.CreateVarlist(), grid.CreateVarlist(),
 		grid.CreateVarlist(), grid.CreateVarlist(), grid.CreateVarlist(),
+		grid.CreateVarlist(), grid.CreateVarlist(), grid.CreateVarlist()}
+	tmp_tf = []VarList{
 		grid.CreateVarlist(), grid.CreateVarlist(), grid.CreateVarlist()}
 
 	for _, v := range uc.field {
@@ -151,7 +155,15 @@ func (grid *Grid) TimeInt_init(uc VarList, integrator string, rhs_func interface
 			tmp_vl[8].AddVar(v.name + "_rk5")
 		default:
 			log.Fatal("use euler icl rk4 rk45 ... or implement more ;)")
+		}
 
+		if timefilter {
+			grid.AddVar(v.name + "_tf1")
+			tmp_tf[0].AddVar(v.name + "_tf1")
+			grid.AddVar(v.name + "_tf2")
+			tmp_tf[1].AddVar(v.name + "_tf2")
+			grid.AddVar(v.name + "_tf3")
+			tmp_tf[2].AddVar(v.name + "_tf3")
 		}
 	}
 
@@ -176,7 +188,20 @@ func (grid *Grid) TimeInt(uc VarList, dt *float64) {
 	case "icn":
 		grid.icn(uc, *dt)
 	case "rk4":
-		grid.rk4(uc, *dt)
+		if timefilter {
+			grid.cpy(tmp_tf[0], uc)
+			grid.rk4(uc, *dt)
+			grid.cpy(tmp_tf[1], uc)
+			grid.rk4(uc, *dt)
+			grid.cpy(tmp_tf[2], uc)
+			epsA := 0.1
+			grid.cpy(uc, tmp_tf[1])
+			grid.addto(uc, epsA, tmp_tf[0])
+			grid.addto(uc, -2.*epsA, tmp_tf[1])
+			grid.addto(uc, epsA, tmp_tf[2])
+		} else {
+			grid.rk4(uc, *dt)
+		}
 	case "rk45":
 		*dt = grid.rk45(uc, *dt)
 	default:
@@ -257,6 +282,10 @@ func (grid *Grid) rhs(r, uc VarList) {
 	in[1] = reflect.ValueOf(r)
 	in[2] = reflect.ValueOf(uc)
 	f.Call(in)
+
+	if damping {
+		grid.damping(r, uc)
+	}
 }
 
 /* time integratos */
@@ -432,7 +461,7 @@ func (grid *Grid) GetBound(name string) []int {
 	case "C":
 		return grid.boundaryC
 	default:
-			panic("boundary does not exist!")
+		panic("boundary does not exist!")
 	}
 
 	return []int{}

@@ -4,11 +4,11 @@ import (
 	"code.google.com/p/lvd.go/cdf"
 	"fmt"
 	"os"
-	_"reflect"
+	_ "reflect"
 )
 
 var (
-	outfile_netcdf string
+	outfile_netcdf    string
 	nout_store_netcdf = -1
 )
 
@@ -22,7 +22,7 @@ func (grid *Grid) Output_netcdf_init(nout int) {
 	}
 
 	nout_store_netcdf = nout
-	outfile_netcdf = outpath + "/" + outfile + ".ncf"
+	outfile_netcdf = outpath + "/" + outfile + ".nc"
 	fmt.Println("Init netcdf file:", outfile_netcdf)
 
 	// could be done better, however this f***ing permutation of the dimensions 
@@ -116,7 +116,7 @@ func (grid *Grid) Output_netcdf(it int) {
 
 	if nout_store_netcdf == -1 {
 		panic("first init netcdf file, then write data")
-	} else if nout_store_netcdf <it {
+	} else if nout_store_netcdf < it {
 		panic("here should be an append function... please implement!")
 	}
 
